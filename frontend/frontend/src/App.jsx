@@ -1,252 +1,169 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import './App.css';
+import { getAttackPatternById, getLimitedAttackPatterns, getTotalAttackPatterns } from "./communicator.js";
+import AttackDetail from "./AttackDetail.jsx"; // Import your new component
 
 export default function App() {
     const [search, setSearch] = useState("");
     const [data, setData] = useState([]);
+    const [hasMore, setHasMore] = useState(true);
+    const [loading, setLoading] = useState(false);
+    const [totalPatterns, setTotalPatterns] = useState(null);
+    
+    const [selectedAttack, setSelectedAttack] = useState(null);
+    const [loadingDetails, setLoadingDetails] = useState(false);
 
-    // Fake data for now
+    const LIMIT = 15;
+    const stateRef = useRef({ data, loading, hasMore });
+    
     useEffect(() => {
-        setData([
-            {
-                id: "T1053.005",
-                name: "Scheduled Task",
-                platforms: ["Windows", "macOS", "Linux"],
-            },
-            {
-                id: "T1205.002",
-                name: "Socket Filters",
-                platforms: ["Linux"]
-            },
-            {
-                id: "T1055",
-                name: "Process Injection",
-                platforms: ["Windows", "macOS"]
+        stateRef.current = { data, loading, hasMore };
+    }, [data, loading, hasMore]);
+
+    // Initial Fetch
+    useEffect(() => {
+        setLoading(true);
+        Promise.all([
+            getTotalAttackPatterns(),
+            getLimitedAttackPatterns(0, LIMIT)
+        ])
+        .then(([count, res]) => {
+            setTotalPatterns(count);
+            if (res.success) {
+                setData(res.data);
+                setHasMore(res.hasMore);
             }
-        ]);
+        })
+        .catch(err => console.error("Initialization failed:", err))
+        .finally(() => setLoading(false));
     }, []);
 
-    const filtered = data.filter(item =>
-        item.name.toLowerCase().includes(search.toLowerCase()) ||
-        item.id.toLowerCase().includes(search.toLowerCase())
-    );
+    // Infinite Scroll Handler
+    useEffect(() => {
+        const handleScroll = () => {
+            const { loading: currentLoading, hasMore: currentHasMore, data: currentData } = stateRef.current;
+            if (currentLoading || !currentHasMore || search.trim() !== "" || selectedAttack) return;
+
+            const { scrollTop, clientHeight, scrollHeight } = document.documentElement;
+            if (scrollHeight - scrollTop - clientHeight < 100) {
+                setLoading(true);
+                getLimitedAttackPatterns(currentData.length, LIMIT)
+                    .then(res => {
+                        if (res.success) {
+                            setData(prevData => {
+                                const newItemsOnly = res.data.filter(
+                                    newItem => !prevData.some(item => item.id === newItem.id)
+                                );
+                                return [...prevData, ...newItemsOnly];
+                            });
+                            setHasMore(res.hasMore);
+                        }
+                    })
+                    .catch(err => console.error(err))
+                    .finally(() => setLoading(false));
+            }
+        };
+
+        window.addEventListener("scroll", handleScroll);
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, [search, selectedAttack]);
+
+    async function handleCardClick(id) {
+        setLoadingDetails(true);
+        try {
+            const res = await getAttackPatternById(id);
+            if (res) {
+                setSelectedAttack(res.data || res); 
+            }
+        } catch (error) {
+            console.error("Error fetching attack details:", error);
+        } finally {
+            setLoadingDetails(false);
+        }
+    }
+
+    const filtered = data.filter(item => {
+        if (!search.trim()) return true;
+        return item.description?.toLowerCase().includes(search.toLowerCase());
+    });
 
     return (
-        <div style={styles.page}>
-            <nav style={styles.navbar}>
-                <div style={styles.logoContainer}>
-                    <div style={styles.logoIcon}>🛡️</div>
-                    <span style={styles.logoText}>MITRE Matrix</span>
+        <div className="page">
+            <nav className="navbar">
+                <div className="logo-container" onClick={() => setSelectedAttack(null)} style={{ cursor: "pointer" }}>
+                    <div className="logo-icon">🛡️</div>
+                    <span className="logo-text">MITRE Matrix</span>
                 </div>
             </nav>
 
-            <div style={styles.container}>
-                <header style={styles.header}>
-                    <h1 style={styles.title}>Attack Patterns Explorer</h1>
-                </header>
+            {/* Swap views cleanly depending on state */}
+            {selectedAttack ? (
+                <AttackDetail 
+                    attack={selectedAttack} 
+                    onBack={() => setSelectedAttack(null)} 
+                />
+            ) : (
+                <div className="container">
+                    <header className="header">
+                        <h1 className="title">Attack Patterns Explorer</h1>
+                    </header>
 
-                <div style={styles.searchWrapper}>
-                    <input
-                        style={styles.search}
-                        placeholder="Search by name, id, platform, or description..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                </div>
+                    <div className="search-wrapper">
+                        <input
+                            className="search"
+                            placeholder="Filter by data in description..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            disabled={loadingDetails}
+                        />
+                    </div>
 
-                <div style={styles.metaCount}>
-                    Showing <strong>{filtered.length}</strong> of {data.length}
-                </div>
+                    <div className="meta-count">
+                        {loadingDetails ? "Loading pattern metrics..." : `Showing ${filtered.length} of ${totalPatterns ?? 0}`}
+                    </div>
 
-                <div style={styles.list}>
-                    {filtered.map(item => (
-                        <div key={item.id} style={styles.card}>
-                            {/* Title & Centered ID Group */}
-                            <div style={styles.titleGroup}>
-                                <div style={styles.cardTitle}>{item.name}</div>
-                                <div style={styles.idWrapperCentered}>
-                                    <span style={styles.cardMeta}>{item.id}</span>
+                    <div className="list">
+                        {filtered.map(item => (
+                            <div
+                                key={item.id}
+                                className="card"
+                                onClick={() => handleCardClick(item.id)}
+                                style={{ cursor: loadingDetails ? "not-allowed" : "pointer", opacity: loadingDetails ? 0.7 : 1 }}
+                            >
+                                <div className="title-group">
+                                    <div className="card-title">{item.name}</div>
                                 </div>
+
+                                <div className="description-group">
+                                    <div className="description truncate-text">{item.description}</div>
+                                </div>
+
+                                {item.platforms?.length > 0 && (
+                                    <div className="platform-container">
+                                        {item.platforms.map((platform, idx) => (
+                                            <span key={idx} className="badge">
+                                                {platform}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                            
-                            <div style={styles.cardDesc}>{item.description}</div>
-                            
-                            {/* Platform Badges Section */}
-                            {item.platforms && item.platforms.length > 0 && (
-                                <div style={styles.platformContainer}>
-                                    {item.platforms.map((platform, idx) => (
-                                        <span key={idx} style={styles.badge}>
-                                            {platform}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
+                        ))}
+                    </div>
+
+                    {loading && (
+                        <div style={{ textAlign: "center", margin: "20px 0", color: "#64748b" }}>
+                            Loading more patterns...
                         </div>
-                    ))}
+                    )}
+                    
+                    {!hasMore && !search && (
+                        <div style={{ textAlign: "center", margin: "40px 0", color: "#94a3b8" }}>
+                            All attack patterns loaded.
+                        </div>
+                    )}
                 </div>
-            </div>
+            )}
         </div>
     );
 }
-
-const styles = {
-    page: {
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-        background: "#f8fafc", 
-        color: "#0f172a",      
-        minHeight: "100vh",
-        paddingBottom: "40px",
-        colorScheme: "light",   
-    },
-
-    navbar: {
-        display: "flex",
-        justifyContent: "flex-start",
-        alignItems: "center",
-        background: "#ffffff",
-        padding: "16px 40px",
-        borderBottom: "1px solid #e2e8f0",
-        boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.05)"
-    },
-
-    logoContainer: {
-        display: "flex",
-        alignItems: "center",
-        gap: "10px"
-    },
-
-    logoIcon: {
-        fontSize: "20px"
-    },
-
-    logoText: {
-        fontWeight: "700",
-        fontSize: "18px",
-        letterSpacing: "-0.5px",
-        color: "#0f172a"
-    },
-
-    container: {
-        maxWidth: "1100px",
-        margin: "0 auto",
-        padding: "0 20px"
-    },
-
-    header: {
-        textAlign: "center",
-        marginTop: "48px",
-        marginBottom: "32px"
-    },
-
-    title: {
-        margin: 0,
-        fontSize: "36px",
-        fontWeight: "800",
-        letterSpacing: "-0.75px",
-        color: "#0f172a"
-    },
-
-    subtitle: {
-        marginTop: "8px",
-        fontSize: "16px",
-        color: "#64748b",
-        maxWidth: "600px",
-        margin: "8px auto 0"
-    },
-
-    searchWrapper: {
-        maxWidth: "600px",
-        margin: "0 auto 16px auto"
-    },
-
-    search: {
-        width: "100%",
-        boxSizing: "border-box", 
-        padding: "14px 18px",
-        borderRadius: "12px",
-        border: "1px solid #cbd5e1",
-        backgroundColor: "#ffffff",
-        color: "#0f172a",
-        fontSize: "16px",
-        outline: "none",
-        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)"
-    },
-
-    metaCount: {
-        textAlign: "center",
-        fontSize: "13px",
-        color: "#64748b",
-        marginBottom: "32px"
-    },
-
-    list: {
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-        gap: "20px"
-    },
-
-    card: {
-        background: "#ffffff",
-        padding: "24px",
-        borderRadius: "16px",
-        border: "1px solid #e2e8f0",
-        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "12px"
-    },
-
-    titleGroup: {
-        display: "flex",
-        flexDirection: "column",
-        gap: "6px"
-    },
-
-    idWrapperCentered: {
-        display: "flex",
-        justifyContent: "center"
-    },
-
-    cardMeta: {
-        fontFamily: "monospace",
-        fontSize: "13px",
-        fontWeight: "600",
-        color: "#2563eb", 
-        background: "#eff6ff",
-        padding: "4px 8px",
-        borderRadius: "6px"
-    },
-
-    platformContainer: {
-        display: "flex",
-        flexWrap: "wrap",
-        justifyContent: "center", /* Also centered the platform container badges to keep symmetry if desired */
-        gap: "6px",
-        marginTop: "auto"
-    },
-
-    badge: {
-        fontSize: "11px",
-        textTransform: "uppercase",
-        letterSpacing: "0.5px",
-        fontWeight: "700",
-        color: "#475569",
-        background: "#f1f5f9",
-        padding: "4px 8px",
-        borderRadius: "6px"
-    },
-
-    cardTitle: {
-        fontSize: "18px",
-        fontWeight: "700",
-        color: "#1e293b",
-        lineHeight: "1.3",
-        textAlign: "center" /* Center-aligns the title text */
-    },
-
-    cardDesc: {
-        fontSize: "14px",
-        color: "#475569",
-        lineHeight: "1.5",
-        textAlign: "center" /* Center-aligns the description text to match */
-    }
-};

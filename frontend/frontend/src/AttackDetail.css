@@ -1,0 +1,136 @@
+/* ==========================================================================
+   AttackDetail Component Styles
+   ========================================================================== */
+
+/* Main Detail View Page Layout */
+.detail-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 24px 16px;
+    animation: detailFadeIn 0.2s ease-out;
+}
+
+/* Functional Back Navigation Button */
+.back-btn {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 24px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.back-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+
+/* Primary Header */
+.detail-header {
+    margin-bottom: 24px;
+}
+
+.detail-title {
+    font-size: 28px;
+    color: #0f172a;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* The List Box Container */
+.detail-list-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+}
+
+/* Rows Dentro del List Box ordered sequentially */
+.detail-row {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #ffffff;
+}
+
+/* Clean base separation for final entry */
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+/* Box Item Labels (e.g., DESCRIPTION, DETECTION) */
+.detail-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    font-weight: 700;
+    margin-bottom: 8px;
+    user-select: none;
+}
+
+/* Value Node Base Styles */
+.detail-value {
+    font-size: 15px;
+    color: #1e293b;
+    line-height: 1.6;
+    white-space: pre-wrap; /* Essential for preserving system breaks / console snippets */
+}
+
+/* MITRE ID Monospace Box */
+.detail-value.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: #2563eb;
+    font-weight: 600;
+    background: #eff6ff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    font-size: 14px;
+    border: 1px solid #dbeafe;
+}
+
+/* Codeblock formatting wrapper for rule logs or multi-line detections */
+.detection-text {
+    background: #f8fafc;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    font-size: 14px;
+}
+
+/* Flex Grid container for badge layout elements */
+.detail-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+/* Phase Badge Custom Coloring */
+.phase-badge {
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+/* Page Entry Animation */
+@keyframes detailFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

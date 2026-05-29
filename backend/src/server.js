@@ -1,5 +1,5 @@
 import app from "./app.js";
-import { loadDatabase } from "./getData.js";
+import { loadDatabase } from "./dataLoader.js";
 
 const PORT = process.env.PORT || 3000;
 
@@ -10,7 +10,7 @@ async function main()
         console.log(`Server running on http://localhost:${PORT}`);
     });
 
-    console.log("Loading database in background...");
+    console.log("Loading database in the background...");
     await loadDatabase();
 }
 

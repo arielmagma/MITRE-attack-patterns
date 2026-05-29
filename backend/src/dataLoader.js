@@ -5,17 +5,24 @@ import fetch from "node-fetch";
 import Database from "better-sqlite3";
 import pLimit from "p-limit";
 
-const limit = pLimit(10);
+const db = new Database(path.resolve(process.cwd(), "../attack.db"));
+const limit = pLimit(15);
 const attack_directory = "../attack-patterns"
-let totalFiles = 0;
-let processedFiles = 0;
 
-export async function loadDatabase() {
-    const dbPath = path.resolve(process.cwd(), "attack.db");
-    const db = new Database(dbPath);
+export function getDB()
+{
+    return db;
+}
 
+export async function loadDatabase()
+{
+    let totalFiles = 0;
+    let processedFiles = 0;
+
+    // Reload data again from 0 every time the server starts up again in case of change in files or attack patterns
     db.exec(`
-    CREATE TABLE IF NOT EXISTS attack_patterns (
+    CREATE TABLE IF NOT EXISTS attack_patterns 
+    (
         id TEXT PRIMARY KEY,
         name TEXT,
         description TEXT,
@@ -49,14 +56,17 @@ export async function loadDatabase() {
     process.stdout.write(`\nDone Loading Database.\n`);
 }
 
-function createInsertMany(db) {
-    const insert = db.prepare(`
+function createInsertMany(db)
+{
+    const insert = db.prepare
+    (`
         INSERT OR REPLACE INTO attack_patterns
         (id, name, description, detection, platforms, phases)
         VALUES (?, ?, ?, ?, ?, ?)
     `);
 
-    return db.transaction((items) => {
+    return db.transaction((items) =>
+    {
         for (const item of items) {
             insert.run(
                 item.id,
@@ -105,26 +115,51 @@ async function getNeededData(data) {
     return results;
 }
 
-async function getDetection(url)
+export async function getDetection(url, depth = 0)
 {
     if (!url) return "NA";
 
-    const res = await fetch(url, {
-        headers: { "User-Agent": "Mozilla/5.0" }
-    });
+    if (depth > 3) return "NA";
 
-    if (!res.ok) return "NA";
-
+    const res = await fetch(url);
     const html = await res.text();
+
     const $ = cheerio.load(html);
+
+    const metaRedirect = $('meta[http-equiv="refresh"]').attr("content");
+
+    if (metaRedirect)
+    {
+        const match = metaRedirect.match(/url=(.*)/i);
+
+        if (match && match[1])
+        {
+            let newUrl = match[1].trim();
+
+            if (newUrl.startsWith("/"))
+            {
+                const base = new URL(url).origin;
+                newUrl = base + newUrl;
+            }
+
+            return getDetection(newUrl, depth + 1);
+        }
+    }
 
     const detections = [];
 
-    $("tr.detection_strategy").each((_, row) => {
-        const text = $(row).find("td:nth-child(2)").text().trim();
-        if (text) detections.push(text);
+    $("tr.detection_strategy").each((_, row) =>
+    {
+        const text = $(row)
+            .find("td:last-child p")
+            .text()
+            .trim();
+
+        if (text)
+        {
+            detections.push(text);
+        }
     });
 
-    const result = detections.length ? detections.join(" | ") : "NA";
-    return result;
+    return detections.length ? detections.join(" | ") : "NA";
 }
