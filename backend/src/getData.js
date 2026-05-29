@@ -5,15 +5,14 @@ import fetch from "node-fetch";
 import Database from "better-sqlite3";
 import pLimit from "p-limit";
 
-const limit = pLimit(15);
-const attack_directory = "../attack-pattern"
-const detectionCache = new Map();
+const limit = pLimit(10);
+const attack_directory = "../attack-patterns"
 let totalFiles = 0;
 let processedFiles = 0;
-let processedItems = 0;
 
 export async function loadDatabase() {
-    const db = new Database("../attack.db");
+    const dbPath = path.resolve(process.cwd(), "attack.db");
+    const db = new Database(dbPath);
 
     db.exec(`
     CREATE TABLE IF NOT EXISTS attack_patterns (
@@ -38,10 +37,7 @@ export async function loadDatabase() {
                 const items = await readAttackPatternFile(file);
 
                 insertMany(items);
-
                 processedFiles++;
-                processedItems += items.length;
-
                 process.stdout.write(`\rFiles Loaded: ${processedFiles}/${totalFiles} (${((processedFiles / totalFiles) * 100).toFixed(1)}%)`);
             } catch (err)
             {
@@ -76,7 +72,7 @@ function createInsertMany(db) {
 
 async function readAttackPatternFile(fileName)
 {
-    const filePath = path.resolve("../attack-pattern", fileName);
+    const filePath = path.resolve(attack_directory, fileName);
 
     const data = await readFile(filePath, "utf8");
     return getNeededData(JSON.parse(data));
@@ -113,10 +109,6 @@ async function getDetection(url)
 {
     if (!url) return "NA";
 
-    if (detectionCache.has(url)) {
-        return detectionCache.get(url);
-    }
-
     const res = await fetch(url, {
         headers: { "User-Agent": "Mozilla/5.0" }
     });
@@ -134,7 +126,5 @@ async function getDetection(url)
     });
 
     const result = detections.length ? detections.join(" | ") : "NA";
-
-    detectionCache.set(url, result);
     return result;
 }

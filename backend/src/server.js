@@ -12,7 +12,6 @@ async function main()
 
     console.log("Loading database in background...");
     await loadDatabase();
-    console.log("Database loaded");
 }
 
 main();
