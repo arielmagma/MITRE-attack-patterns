@@ -1,9 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import './App.css';
 import { getAttackPatternById, getLimitedAttackPatterns, getTotalAttackPatterns } from "./communicator.js";
-import AttackDetail from "./AttackDetail.jsx"; // Import your new component
+import AttackDetail from "./AttackDetail.jsx"; 
+import ChatWindow from "./ChatWindow.jsx"; 
 
-export default function App() {
+export default function App() 
+{
     const [search, setSearch] = useState("");
     const [data, setData] = useState([]);
     const [hasMore, setHasMore] = useState(true);
@@ -13,16 +15,21 @@ export default function App() {
     const [selectedAttack, setSelectedAttack] = useState(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
 
-    const LIMIT = 15;
-    const stateRef = useRef({ data, loading, hasMore });
-    
-    useEffect(() => {
-        stateRef.current = { data, loading, hasMore };
-    }, [data, loading, hasMore]);
+    const [activeBotFilters, setActiveBotFilters] = useState(null);
 
-    // Initial Fetch
-    useEffect(() => {
+    const LIMIT = 15;
+    const stateRef = useRef({ data, loading, hasMore, activeBotFilters });
+    
+    useEffect(() => 
+    {
+        stateRef.current = { data, loading, hasMore, activeBotFilters };
+    }, [data, loading, hasMore, activeBotFilters]);
+
+    const loadInitialData = () => 
+    {
         setLoading(true);
+        setActiveBotFilters(null);
+        
         Promise.all([
             getTotalAttackPatterns(),
             getLimitedAttackPatterns(0, LIMIT)
@@ -36,13 +43,25 @@ export default function App() {
         })
         .catch(err => console.error("Initialization failed:", err))
         .finally(() => setLoading(false));
+    };
+
+    useEffect(() => 
+    {
+        loadInitialData();
     }, []);
 
-    // Infinite Scroll Handler
-    useEffect(() => {
-        const handleScroll = () => {
-            const { loading: currentLoading, hasMore: currentHasMore, data: currentData } = stateRef.current;
-            if (currentLoading || !currentHasMore || search.trim() !== "" || selectedAttack) return;
+    useEffect(() => 
+    {
+        const handleScroll = () => 
+        {
+            const { 
+                loading: currentLoading, 
+                hasMore: currentHasMore, 
+                data: currentData,
+                activeBotFilters: currentBotFilters 
+            } = stateRef.current;
+            
+            if (currentLoading || !currentHasMore || search.trim() !== "" || selectedAttack || currentBotFilters) return;
 
             const { scrollTop, clientHeight, scrollHeight } = document.documentElement;
             if (scrollHeight - scrollTop - clientHeight < 100) {
@@ -68,16 +87,33 @@ export default function App() {
         return () => window.removeEventListener("scroll", handleScroll);
     }, [search, selectedAttack]);
 
-    async function handleCardClick(id) {
+    const handleBotFilters = (appliedFilters, filteredDataset) => 
+    {
+        if (filteredDataset) 
+        {
+            setData(filteredDataset);
+            setActiveBotFilters(appliedFilters);
+            setHasMore(false);
+        }
+    };
+
+    async function handleCardClick(id) 
+    {
         setLoadingDetails(true);
-        try {
+        try 
+        {
             const res = await getAttackPatternById(id);
-            if (res) {
+            if (res) 
+            {
                 setSelectedAttack(res.data || res); 
             }
-        } catch (error) {
+        } 
+        catch (error)
+         {
             console.error("Error fetching attack details:", error);
-        } finally {
+        } 
+        finally 
+        {
             setLoadingDetails(false);
         }
     }
@@ -96,7 +132,6 @@ export default function App() {
                 </div>
             </nav>
 
-            {/* Swap views cleanly depending on state */}
             {selectedAttack ? (
                 <AttackDetail 
                     attack={selectedAttack} 
@@ -107,6 +142,37 @@ export default function App() {
                     <header className="header">
                         <h1 className="title">Attack Patterns Explorer</h1>
                     </header>
+
+                    {activeBotFilters && (
+                        <div className="filter-hud-banner" style={{ padding: '12px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <strong>AI Filter Mode Active:</strong> Spanning options:
+
+                                {platforms.length > 0 && (<span> [Platform: {platforms.join(", ")}]</span>)}
+
+                                {phases.length > 0 && (<span> [Phase: {phases.join(", ")}]</span>)}
+
+                                {activeBotFilters.name && (
+                                    <span> [Name: "{activeBotFilters.name}"]</span>
+                                )}
+
+                                {activeBotFilters.detection && (
+                                    <span> [Detection keyword: "{activeBotFilters.detection}"]</span>
+                                )}
+
+                                {activeBotFilters.description && (
+                                    <span> [Description keyword: "{activeBotFilters.description}"]</span>
+                                )}
+
+                                {activeBotFilters.id && (
+                                    <span> [Technique Code: {activeBotFilters.id}]</span>
+                                )}
+                            </div>
+                            <button onClick={loadInitialData} style={{ background: '#16a34a', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer' }}>
+                                Clear Bot Filters
+                            </button>
+                        </div>
+                    )}
 
                     <div className="search-wrapper">
                         <input
@@ -157,13 +223,16 @@ export default function App() {
                         </div>
                     )}
                     
-                    {!hasMore && !search && (
+                    {!hasMore && !search && !activeBotFilters && (
                         <div style={{ textAlign: "center", margin: "40px 0", color: "#94a3b8" }}>
                             All attack patterns loaded.
                         </div>
                     )}
                 </div>
             )}
+
+            {/* FIXED: Hook the event handler wrapper to the Chat Window element */}
+            <ChatWindow onApplyFilters={handleBotFilters} />
         </div>
     );
 }

@@ -1,10 +1,11 @@
 import React from "react";
+import "./AttackDetail.css";
 
 export default function AttackDetail({ attack, onBack }) {
     if (!attack) return null;
 
     return (
-        <div className="container detail-container">
+        <div className="detail-container">
             <button className="back-btn" onClick={onBack}>
                 ← Back to List
             </button>
@@ -13,19 +14,23 @@ export default function AttackDetail({ attack, onBack }) {
                 <h1 className="detail-title">{attack.name}</h1>
             </header>
 
-            {/* List Box Structure in strict requested order */}
+            {/* List Box Structure */}
             <div className="detail-list-box">
                 
                 {/* 1. Attack Pattern ID */}
                 <div className="detail-row">
                     <span className="detail-label">Attack Pattern ID</span>
-                    <span className="detail-value mono">{attack.id}</span>
+                    <div>
+                        <span className="detail-value mono">{attack.id}</span>
+                    </div>
                 </div>
                 
                 {/* 2. Description */}
                 <div className="detail-row">
                     <span className="detail-label">Description</span>
-                    <span className="detail-value">{attack.description || "No description provided."}</span>
+                    <div className="detail-value">
+                        {attack.description || "No description provided."}
+                    </div>
                 </div>
 
                 {/* 3. Platforms */}
@@ -51,7 +56,7 @@ export default function AttackDetail({ attack, onBack }) {
                                     </div>
                                 );
                             }
-                            return "N/A";
+                            return <span className="text-muted">N/A</span>;
                         })()}
                     </div>
                 </div>
@@ -59,9 +64,10 @@ export default function AttackDetail({ attack, onBack }) {
                 {/* 4. Detection */}
                 <div className="detail-row">
                     <span className="detail-label">Detection</span>
-                    <span className="detail-value detection-text">
+                    {/* Changed from span to div to fix structural block styling */}
+                    <div className="detail-value detection-text">
                         {attack.detection || "No explicit detection rules mapped."}
-                    </span>
+                    </div>
                 </div>
 
                 {/* 5. Phases */}
@@ -69,9 +75,7 @@ export default function AttackDetail({ attack, onBack }) {
                     <span className="detail-label">Phases</span>
                     <div className="detail-value">
                         {(() => {
-                            // Case 1: Valid array
-                            if (Array.isArray(attack.phases) && attack.phases.length > 0) 
-                            {
+                            if (Array.isArray(attack.phases) && attack.phases.length > 0) {
                                 return (
                                     <div className="detail-badges">
                                         {attack.phases.map((phase, i) => (
@@ -81,16 +85,12 @@ export default function AttackDetail({ attack, onBack }) {
                                 );
                             }
                             
-                            if (typeof attack.phases === "string" && attack.phases.trim() !== "") 
-                            {
+                            if (typeof attack.phases === "string" && attack.phases.trim() !== "") {
                                 let cleanPhases = attack.phases;
-                                
                                 if (cleanPhases.includes('""')) {
                                     cleanPhases = cleanPhases.replace(/""/g, '","');
                                 }
-                                
                                 cleanPhases = cleanPhases.replace(/[\[\]"']/g, "");
-                                
                                 const phaseArray = cleanPhases.split(",").map(p => p.trim());
                                 
                                 return (
@@ -102,8 +102,7 @@ export default function AttackDetail({ attack, onBack }) {
                                 );
                             }
 
-                            if (attack.phase) 
-                            {
+                            if (attack.phase) {
                                 return (
                                     <div className="detail-badges">
                                         <span className="badge phase-badge">{attack.phase}</span>
@@ -111,7 +110,7 @@ export default function AttackDetail({ attack, onBack }) {
                                 );
                             }
 
-                            return "N/A";
+                            return <span className="text-muted">N/A</span>;
                         })()}
                     </div>
                 </div>

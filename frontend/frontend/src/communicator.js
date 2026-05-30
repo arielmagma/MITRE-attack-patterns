@@ -31,3 +31,31 @@ export async function getTotalAttackPatterns()
     const { total } = await res.json();
     return total;
 }
+
+export async function askFilterAssistant(history) 
+{
+    try {
+        const res = await fetch("http://localhost:3000/api/chat", 
+        {
+            method: "POST",
+            headers: 
+            {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ messages: history }) 
+        });
+        
+        const response = await res.json();
+        console.log("Received response from assistant:", response);
+        return response;
+    }
+    catch (error) 
+    {
+        console.error("Failed to get filter response:", error);
+    
+        return { 
+            type: "text", 
+            message: "Sorry, I encountered an error. Please try again." 
+        };
+    }
+}
