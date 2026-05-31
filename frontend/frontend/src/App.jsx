@@ -122,12 +122,12 @@ export default function App()
         if (!search.trim()) return true;
         return item.description?.toLowerCase().includes(search.toLowerCase());
     });
-
+    
     return (
         <div className="page">
             <nav className="navbar">
                 <div className="logo-container" onClick={() => setSelectedAttack(null)} style={{ cursor: "pointer" }}>
-                    <div className="logo-icon">🛡️</div>
+                    <div className="logo-icon"><img src="public/MITRE-Icon.webp" alt="MITRE Matrix Logo" style={{ width: '40px', height: '40px', marginRight: '10px' }}/></div>
                     <span className="logo-text">MITRE Matrix</span>
                 </div>
             </nav>
@@ -148,9 +148,9 @@ export default function App()
                             <div>
                                 <strong>AI Filter Mode Active:</strong> Spanning options:
 
-                                {platforms.length > 0 && (<span> [Platform: {platforms.join(", ")}]</span>)}
+                                {activeBotFilters.platform?.length > 0 && (<span> [Platform: {activeBotFilters.platform.join(", ")}]</span>)}
 
-                                {phases.length > 0 && (<span> [Phase: {phases.join(", ")}]</span>)}
+                                {activeBotFilters.phase?.length > 0 && (<span> [Phase: {activeBotFilters.phase.join(", ")}]</span>)}
 
                                 {activeBotFilters.name && (
                                     <span> [Name: "{activeBotFilters.name}"]</span>

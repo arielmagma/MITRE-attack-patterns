@@ -28,7 +28,7 @@ const webFilterTool =
                         {
                                 type: 'array',
                                 description: 'Filter attack patterns by operating system.',
-                                enum: ['Windows', 'IaaS', 'Linux', 'macOS', 'SaaS', 'Network Devices', 'PRE', 'Containers', 'ESXi', "Identity Provider", 'Office Suite', 'Office 365', 'All']
+                                enum: ['Windows', 'IaaS', 'Linux', 'macOS', 'SaaS', 'Network Devices', 'PRE', 'Containers', 'ESXi', "Identity Provider", 'Office Suite', 'Office 365', '']
                         },
                         phase:
                         {
