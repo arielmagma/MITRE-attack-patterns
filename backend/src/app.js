@@ -4,6 +4,7 @@ import cors from "cors";
 import ollama from "ollama";
 import { fileURLToPath } from "node:url";
 import {getAmountOfAttackPatterns, getAttackPatternById, getLimitedAttackPatterns, filterAttackPatterns} from "./dataHandler.js";
+import { checkUrl, checkDomain, checkIP, checkFile } from "./virusTotal.js";
 
 const app = express();
 app.use(cors());
@@ -61,6 +62,37 @@ const webFilterTool =
         }
     };
 
+const virusTotalTool =
+    {
+        type: 'function',
+        function:
+            {
+                name: 'checkVirusTotal',
+                description: 'Query VirusTotal for files, URLs, domains, or IP addresses',
+
+                parameters:
+                    {
+                        type: 'object',
+                        properties:
+                            {
+                                type:
+                                    {
+                                        type: 'string',
+                                        enum: ['file', 'url', 'domain', 'ip'],
+                                        description: 'Type of indicator'
+                                    },
+
+                                value:
+                                    {
+                                        type: 'string',
+                                        description: 'Hash, URL, domain or IP'
+                                    }
+                            },
+                        required: ['type', 'value']
+                    }
+            }
+    };
+
 app.get("/api/attack/:id", (req, res) =>
 {
     const { id } = req.params;
@@ -111,7 +143,7 @@ app.post('/api/chat', async (req, res) =>
         ({
             model: 'cyber-bot',
             messages: messages,
-            tools: [webFilterTool]
+            tools: [webFilterTool, virusTotalTool]
         });
 
         let botMessage = response.message;
@@ -122,7 +154,7 @@ app.post('/api/chat', async (req, res) =>
 
             if (toolCall.function.name === 'setWebsiteFilters')
             {
-                const args = toolCall.function.arguments;
+                const args = JSON.parse(toolCall.function.arguments);
 
                 const finalArgs =
                 {
@@ -162,6 +194,55 @@ app.post('/api/chat', async (req, res) =>
                     type: 'filter_action',
                     filters: finalArgs,
                     data: matchedPatterns,
+                    message: finalResponse.message.content
+                });
+            }
+
+            if (toolCall.function.name === 'checkVirusTotal')
+            {
+                const args =
+                    typeof toolCall.function.arguments === 'string'
+                        ? JSON.parse(toolCall.function.arguments)
+                        : toolCall.function.arguments;
+
+                let result;
+
+                switch (args.type)
+                {
+                    case 'file':
+                        result = await checkFile(args.value);
+                        break;
+
+                    case 'url':
+                        result = await checkUrl(args.value);
+                        break;
+
+                    case 'domain':
+                        result = await checkDomain(args.value);
+                        break;
+
+                    case 'ip':
+                        result = await checkIP(args.value);
+                        break;
+                }
+
+                messages.push(botMessage);
+                messages.push
+                ({
+                    role: 'user',
+                    content: `TOOL_RESPONSE: ${JSON.stringify(result)}`
+                });
+
+                const finalResponse = await ollama.chat
+                ({
+                    model: 'cyber-bot',
+                    messages
+                });
+
+                return res.json
+                ({
+                    type: 'virustotal',
+                    data: result,
                     message: finalResponse.message.content
                 });
             }

@@ -1,4 +1,6 @@
 .idea
+.env
+Modelfile
 attack-patterns
 node_modules
 attack.db

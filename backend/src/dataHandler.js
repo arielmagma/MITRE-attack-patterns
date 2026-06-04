@@ -61,7 +61,7 @@ export function filterAttackPatterns(platform, phase, id, name, description, det
     {
         const clauses = platform.map(() => "platforms LIKE ?");
 
-        query += ` AND (${clauses.join(" OR ")})`;
+        query += ` AND (${clauses.join(" AND ")})`;
 
         for (const p of platform)
         {
@@ -74,7 +74,7 @@ export function filterAttackPatterns(platform, phase, id, name, description, det
     {
         const clauses = phase.map(() => "phases LIKE ?");
 
-        query += ` AND (${clauses.join(" OR ")})`;
+        query += ` AND (${clauses.join(" AND ")})`;
 
         for (const p of phase)
         {
