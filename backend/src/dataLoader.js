@@ -101,7 +101,7 @@ async function getNeededData(data) {
                 return {
                     name: item.name,
                     description: item.description,
-                    id: item.id,
+                    id: mitreRef.external_id ?? "NA",
                     x_mitre_detection: mitreRef?.url
                         ? await getDetection(mitreRef.url)
                         : "NA",

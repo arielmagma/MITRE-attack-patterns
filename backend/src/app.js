@@ -27,16 +27,20 @@ const webFilterTool =
                     {
                         platform:
                         {
-                                type: 'array',
-                                description: 'Filter attack patterns by operating system.',
+                            type: 'array',
+                            description: 'Filter attack patterns by operating system.',
+                            items:
+                            {
                                 enum: ['Windows', 'IaaS', 'Linux', 'macOS', 'SaaS', 'Network Devices', 'PRE', 'Containers', 'ESXi', "Identity Provider", 'Office Suite', 'Office 365', '']
-                        },
+                            }                        },
                         phase:
                         {
-                                type: 'array',
-                                description: 'Filter attack patterns by tactical execution phase.',
+                            type: 'array',
+                            description: 'Filter attack patterns by tactical execution phase.',
+                            items:
+                            {
                                 enum: ['stealth', 'privilege-escalation', 'defense-impairment', 'lateral-movement', 'credential-access', 'collection', 'resource-development', 'persistence', 'command-and-control', 'discovery', 'execution', 'reconnaissance', 'impact', 'initial-access', 'exfiltration', '']
-                        },
+                            }                        },
                         id:
                         {
                             type: 'string',
@@ -154,12 +158,15 @@ app.post('/api/chat', async (req, res) =>
 
             if (toolCall.function.name === 'setWebsiteFilters')
             {
-                const args = JSON.parse(toolCall.function.arguments);
+                const args =
+                    typeof toolCall.function.arguments === "string"
+                        ? JSON.parse(toolCall.function.arguments)
+                        : toolCall.function.arguments;
 
                 const finalArgs =
                 {
-                    platform: args.platform ?? [],
-                    phase: args.phase ?? [],
+                    platform: safeParse(args.platform),
+                    phase: safeParse(args.phase),
                     id: args.id ?? '',
                     name: args.name ?? '',
                     description: args.description ?? '',
@@ -261,5 +268,30 @@ app.post('/api/chat', async (req, res) =>
         res.status(500).json({ error: "Ollama communication failure" });
     }
 });
+
+const safeParse = (value) =>
+{
+    if (value == null) return [];
+
+    if (Array.isArray(value)) return value;
+
+    if (typeof value === "string")
+    {
+        try
+        {
+            const parsed = JSON.parse(value);
+
+            if (Array.isArray(parsed)) return parsed;
+
+            return [parsed];
+        }
+        catch
+        {
+            return [value];
+        }
+    }
+
+    return [value];
+};
 
 export default app;

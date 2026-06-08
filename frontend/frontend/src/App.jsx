@@ -200,6 +200,10 @@ export default function App()
                                     <div className="card-title">{item.name}</div>
                                 </div>
 
+                                <div className="id-group">
+                                    <div className="card-id">{item.id}</div>
+                                </div>
+                                
                                 <div className="description-group">
                                     <div className="description truncate-text">{item.description}</div>
                                 </div>
