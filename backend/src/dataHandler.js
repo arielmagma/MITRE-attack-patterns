@@ -23,17 +23,16 @@ export function getAttackPatternById(id)
     };
 }
 
-export function getLimitedAttackPatterns(offset, limit)
+export function getAttackPatterns(offset, limit)
 {
     const db = getDB();
 
     const stmt = db.prepare(`
         SELECT *
         FROM attack_patterns 
-        LIMIT ? OFFSET ?
     `);
 
-    const rows = stmt.all(limit, offset);
+    const rows = stmt.all();
 
     return rows.map(row =>
     ({

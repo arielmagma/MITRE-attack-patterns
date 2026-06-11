@@ -5,11 +5,11 @@ export async function getAttackPatternById(id)
     return res.json();
 }
 
-export async function getLimitedAttackPatterns(loaded, limit) 
+export async function getAttackPatterns() 
 {
     try 
     {
-        const res = await fetch(`http://localhost:3000/api/attacks?loaded=${loaded}&limit=${limit}`);
+        const res = await fetch(`http://localhost:3000/api/attacks`);
         
         if (!res.ok) 
         {

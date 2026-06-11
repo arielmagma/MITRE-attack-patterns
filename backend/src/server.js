@@ -14,4 +14,4 @@ async function main()
     await loadDatabase();
 }
 
-main();
+main().then();

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import './App.css';
-import { getAttackPatternById, getLimitedAttackPatterns, getTotalAttackPatterns } from "./communicator.js";
+import { getAttackPatternById, getAttackPatterns, getTotalAttackPatterns } from "./communicator.js";
 import AttackDetail from "./AttackDetail.jsx"; 
 import ChatWindow from "./ChatWindow.jsx"; 
 
@@ -8,22 +8,20 @@ export default function App()
 {
     const [search, setSearch] = useState("");
     const [data, setData] = useState([]);
-    const [hasMore, setHasMore] = useState(true);
     const [loading, setLoading] = useState(false);
     const [totalPatterns, setTotalPatterns] = useState(null);
-    
+
     const [selectedAttack, setSelectedAttack] = useState(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
 
     const [activeBotFilters, setActiveBotFilters] = useState(null);
 
-    const LIMIT = 15;
-    const stateRef = useRef({ data, loading, hasMore, activeBotFilters });
+    const stateRef = useRef({ data });
     
     useEffect(() => 
     {
-        stateRef.current = { data, loading, hasMore, activeBotFilters };
-    }, [data, loading, hasMore, activeBotFilters]);
+        stateRef.current = { data };
+    }, [data]);
 
     const loadInitialData = () => 
     {
@@ -32,13 +30,14 @@ export default function App()
         
         Promise.all([
             getTotalAttackPatterns(),
-            getLimitedAttackPatterns(0, LIMIT)
+            getAttackPatterns()
         ])
-        .then(([count, res]) => {
+        .then(([count, res]) => 
+        {
             setTotalPatterns(count);
-            if (res.success) {
+            if (res.success) 
+            {
                 setData(res.data);
-                setHasMore(res.hasMore);
             }
         })
         .catch(err => console.error("Initialization failed:", err))
@@ -49,43 +48,6 @@ export default function App()
     {
         loadInitialData();
     }, []);
-
-    useEffect(() => 
-    {
-        const handleScroll = () => 
-        {
-            const { 
-                loading: currentLoading, 
-                hasMore: currentHasMore, 
-                data: currentData,
-                activeBotFilters: currentBotFilters 
-            } = stateRef.current;
-            
-            if (currentLoading || !currentHasMore || search.trim() !== "" || selectedAttack || currentBotFilters) return;
-
-            const { scrollTop, clientHeight, scrollHeight } = document.documentElement;
-            if (scrollHeight - scrollTop - clientHeight < 100) {
-                setLoading(true);
-                getLimitedAttackPatterns(currentData.length, LIMIT)
-                    .then(res => {
-                        if (res.success) {
-                            setData(prevData => {
-                                const newItemsOnly = res.data.filter(
-                                    newItem => !prevData.some(item => item.id === newItem.id)
-                                );
-                                return [...prevData, ...newItemsOnly];
-                            });
-                            setHasMore(res.hasMore);
-                        }
-                    })
-                    .catch(err => console.error(err))
-                    .finally(() => setLoading(false));
-            }
-        };
-
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, [search, selectedAttack]);
 
     const handleBotFilters = (appliedFilters, filteredDataset) => 
     {
@@ -220,18 +182,6 @@ export default function App()
                             </div>
                         ))}
                     </div>
-
-                    {loading && (
-                        <div style={{ textAlign: "center", margin: "20px 0", color: "#64748b" }}>
-                            Loading more patterns...
-                        </div>
-                    )}
-                    
-                    {!hasMore && !search && !activeBotFilters && (
-                        <div style={{ textAlign: "center", margin: "40px 0", color: "#94a3b8" }}>
-                            All attack patterns loaded.
-                        </div>
-                    )}
                 </div>
             )}
 

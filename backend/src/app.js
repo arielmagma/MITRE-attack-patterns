@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import ollama from "ollama";
 import { fileURLToPath } from "node:url";
-import {getAmountOfAttackPatterns, getAttackPatternById, getLimitedAttackPatterns, filterAttackPatterns} from "./dataHandler.js";
+import {getAmountOfAttackPatterns, getAttackPatternById, getAttackPatterns, filterAttackPatterns} from "./dataHandler.js";
 import { checkUrl, checkDomain, checkIP, checkFile } from "./virusTotal.js";
 
 const app = express();
@@ -113,20 +113,13 @@ app.get("/api/attack/:id", (req, res) =>
 
 app.get("/api/attacks", (req, res) =>
 {
-    const loaded = parseInt(req.query.loaded) || 0;
-    const limit = parseInt(req.query.limit) || 30;
 
-    // ask for one extra row to detect "hasMore"
-    const patterns = getLimitedAttackPatterns(loaded, limit);
+    const patterns = getAttackPatterns();
 
-    let totalPatterns = getAmountOfAttackPatterns();
-    let hasMore = (loaded + patterns.length) < totalPatterns;
-
-    return res.json({
+    return res.json(
+    {
         success: true,
-        data: patterns,
-        hasMore: hasMore,
-        total: totalPatterns
+        data: patterns
     });
 });
 
