@@ -1,7 +1,8 @@
 import React from "react";
 import "./AttackDetail.css";
 
-export default function AttackDetail({ attack, onBack }) {
+export default function AttackDetail({ attack, onBack }) 
+{
     if (!attack) return null;
 
     return (

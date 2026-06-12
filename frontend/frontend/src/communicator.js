@@ -46,7 +46,6 @@ export async function askFilterAssistant(history)
         });
         
         const response = await res.json();
-        console.log("Received response from assistant:", response);
         return response;
     }
     catch (error) 
@@ -59,3 +58,53 @@ export async function askFilterAssistant(history)
         };
     }
 }
+
+export async function getAnalysisJobs()
+{
+    try 
+    {
+        const res = await fetch("http://localhost:3000/api/analysis/jobs");
+        return await res.json();
+    }
+    catch (error) 
+    {
+        console.error("Failed to get analysis jobs:", error);
+        return { success: false, data: [] };
+    }
+}
+
+export async function getAnalysisDetails(jobId) 
+{
+    try
+    {
+        const res = await fetch(`http://localhost:3000/api/analysis/jobs/${jobId}`);
+        const parsedData = await res.json();
+        return parsedData;
+    }
+    catch (error)
+    {
+        console.error(`Failed to get analysis details for job ${jobId}:`, error);
+        return { success: false, data: null };
+    }
+}
+
+export const uploadFileForAnalysis = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('http://localhost:3000/api/analysis/upload', {
+        method: 'POST',
+        body: formData,
+    });
+
+    const text = await response.text();
+    if (!text) {
+        return { success: true, data: null };
+    }
+
+    try {
+        return JSON.parse(text);
+    } catch (e) {
+        throw new Error("Invalid JSON response from server");
+    }
+};

@@ -1,10 +1,14 @@
 import path from "node:path";
+import multer from "multer";
+import fs from "fs";
 import express from "express";
 import cors from "cors";
 import ollama from "ollama";
 import { fileURLToPath } from "node:url";
-import {getAmountOfAttackPatterns, getAttackPatternById, getAttackPatterns, filterAttackPatterns} from "./dataHandler.js";
+import {getAmountOfAttackPatterns, getAttackPatternById, getAttackPatterns, filterAttackPatterns, getAllAnalysisJobs } from "./dataHandler.js";
 import { checkUrl, checkDomain, checkIP, checkFile } from "./virusTotal.js";
+import { getSandboxReport, uploadFile } from "./sandbox.js";
+
 
 const app = express();
 app.use(cors());
@@ -13,6 +17,20 @@ app.use(express.json());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) =>
+    {
+        cb(null, "uploads/");
+    },
+
+    filename: (req, file, cb) =>
+    {
+        cb(null, file.originalname);
+    }
+});
+
+const upload = multer({ storage });
 
 const webFilterTool =
     {
@@ -129,6 +147,42 @@ app.get("/api/attacks/total", (req, res) =>
         success: true,
         total: getAmountOfAttackPatterns(),
     });
+});
+
+
+app.get("/api/analysis/jobs", async (req, res) => {
+    try {
+        const jobs = await getAllAnalysisJobs();
+        return res.json({
+            success: true,
+            data: jobs
+        });
+    } catch (error) {
+        console.error("Failed to retrieve analysis queue entries:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Internal server database error fetching jobs queue list."
+        });
+    }
+});
+
+app.get("/api/analysis/jobs/:job_id", async (req, res) =>
+{
+    const {job_id} = req.params;
+
+    try {
+        const report = await getSandboxReport(job_id);
+        return res.json({
+            success: true,
+            data: report
+        });
+    } catch (error) {
+        console.error("Failed to retrieve analysis queue entries:", error);
+        return res.status(500).json({
+            success: false,
+            error: "Error fetching file analysis report."
+        });
+    }
 });
 
 app.post('/api/chat', async (req, res) =>
@@ -259,6 +313,37 @@ app.post('/api/chat', async (req, res) =>
     {
         console.error("Backend Chat Error:", error);
         res.status(500).json({ error: "Ollama communication failure" });
+    }
+});
+
+app.post("/api/analysis/upload", upload.single("file"), async (req, res) =>
+{
+    const filePath = req.file?.path;
+    const originalName = req.file?.originalname;
+
+    try
+    {
+        const result = await uploadFile(filePath);
+        return res.json({
+            success: true,
+            data: result
+        });
+    }
+    catch (err)
+    {
+        console.error(err);
+
+        return res.status(500).json({
+            success: false,
+            error: "Upload failed"
+        });
+    }
+    finally
+    {
+        if (filePath)
+        {
+            fs.unlink(filePath, () => {});
+        }
     }
 });
 

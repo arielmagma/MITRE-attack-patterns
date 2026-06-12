@@ -1,4 +1,5 @@
 import {getDB} from "./dataLoader.js";
+import {getStatus, getSummary} from "./sandbox.js";
 
 export function getAttackPatternById(id)
 {
@@ -117,25 +118,69 @@ export function filterAttackPatterns(platform, phase, id, name, description, det
     }));
 }
 
-export function normalizeToArray(value)
+export function saveAnalysisJob({ jobId, filename, platform, status })
 {
-    if (!value) return [];
+    const db = getDB();
+    const stmt = db.prepare(`
+        INSERT OR REPLACE INTO analysis_jobs (job_id, filename, platform, status)
+        VALUES (?, ?, ?, ?)
+    `);
+    return stmt.run(jobId, filename, platform, status || 'Analyzing');
+}
 
-    if (Array.isArray(value)) return value;
+export function updateJobStatus(jobId, status, threat)
+{
+    const db = getDB();
+    const stmt = db.prepare(`
+        UPDATE analysis_jobs
+        SET status = ?, suspicion_level = ?
+        WHERE job_id = ?
+    `);
+    return stmt.run(status, threat, jobId);
+}
 
-    if (typeof value === "string")
+export async function getAllAnalysisJobs()
+{
+    await updateStatus(); // Update all pending analysis request before loading
+
+    const db = getDB();
+    const stmt = db.prepare(`
+        SELECT job_id AS id, filename AS name, platform, status
+        FROM analysis_jobs
+        ORDER BY created_at DESC
+    `);
+
+    return stmt.all();
+}
+
+async function updateStatus()
+{
+    const db = getDB();
+    const stmt = db.prepare(`
+        SELECT job_id, status
+        FROM analysis_jobs
+        WHERE status NOT IN ('Completed', 'Failed')
+    `);
+
+    const jobs = stmt.all();
+
+    for (const job of jobs)
     {
-        if (value === "All") return [];
-
         try
         {
-            return JSON.parse(value.replace(/'/g, '"'));
+            const updatedStatus = await getStatus(job.job_id);
+
+            if (updatedStatus !== job.status && updatedStatus !== "ERROR") // If new status for the job and not just an error
+            {
+                const summary = await getSummary(job.job_id);
+                const updatedThreat = summary?.threat_level;
+                console.log(updatedThreat);
+                updateJobStatus(job.job_id, updatedStatus, updatedThreat);
+            }
         }
-        catch
+        catch (err)
         {
-            return value.split(",").map(v => v.trim()).filter(Boolean);
+            console.error(`[Status Sync Error] Failed to update job ${job.job_id}:`, err.message);
         }
     }
-
-    return [];
 }

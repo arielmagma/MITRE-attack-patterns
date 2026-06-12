@@ -8,10 +8,9 @@
     color-scheme: light;
 }
 
-/* --- Navigation --- */
 .navbar {
     display: flex;
-    justify-content: flex-start;
+    justify-content: space-between; /* Changed from flex-start to push links to the right */
     align-items: center;
     background: #ffffff;
     padding: 16px 40px;
@@ -19,14 +18,37 @@
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
 }
 
+/* Optional: Clean styling for your new navigation links container */
+.nav-links {
+    display: flex;
+    gap: 24px;
+}
+
+/* Optional: Clean interactive transitions for the navigation buttons */
+.nav-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    font-weight: 500;
+    color: #64748b; /* Subtle slate gray for inactive state */
+    cursor: pointer;
+    padding: 4px 8px;
+    transition: color 0.2s ease, font-weight 0.2s ease;
+}
+
+.nav-btn:hover {
+    color: #0f172a; /* Darker text on hover */
+}
+
+.nav-btn.active {
+    color: #0070f3; /* Your active blue color */
+    font-weight: 600;
+}
+
 .logo-container {
     display: flex;
     align-items: center;
     gap: 10px;
-}
-
-.logo-icon {
-    font-size: 20px;
 }
 
 .logo-text {
@@ -36,7 +58,6 @@
     color: #0f172a;
 }
 
-/* --- Main Structure & Header --- */
 .container {
     max-width: 1100px;
     margin: 0 auto;
@@ -65,7 +86,6 @@
     margin: 8px auto 0;
 }
 
-/* --- Search Bar --- */
 .search-wrapper {
     max-width: 600px;
     margin: 0 auto 16px auto;
@@ -84,7 +104,6 @@
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
-/* --- Filters Section --- */
 .filters-section {
     max-width: 600px;
     margin: 0 auto 24px auto;
@@ -158,7 +177,6 @@
     margin-bottom: 32px;
 }
 
-/* --- Grid & Cards --- */
 .list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -238,6 +256,7 @@
     text-align: center;
 }
 
+
 .card-desc {
     font-size: 14px;
     color: #475569;
@@ -254,12 +273,23 @@
 .truncate-text {
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;  
     
     overflow: hidden;
     text-overflow: ellipsis;
     
     word-break: break-word; 
+}
+
+.card-id {
+    font-family: monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: #2563eb;
+    background: #eff6ff;
+    padding: 4px 8px;
+    border-radius: 6px;
 }
 
 .id-group {

@@ -3,9 +3,11 @@ import './App.css';
 import { getAttackPatternById, getAttackPatterns, getTotalAttackPatterns } from "./communicator.js";
 import AttackDetail from "./AttackDetail.jsx"; 
 import ChatWindow from "./ChatWindow.jsx"; 
+import Analysis from "./Analysis.jsx";
 
-export default function App() 
+export default function App()
 {
+    const [currentView, setCurrentView] = useState("explorer");
     const [search, setSearch] = useState("");
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -44,8 +46,7 @@ export default function App()
         .finally(() => setLoading(false));
     };
 
-    useEffect(() => 
-    {
+    useEffect(() => {
         loadInitialData();
     }, []);
 
@@ -55,7 +56,7 @@ export default function App()
         {
             setData(filteredDataset);
             setActiveBotFilters(appliedFilters);
-            setHasMore(false);
+            setCurrentView("explorer");
         }
     };
 
@@ -68,6 +69,7 @@ export default function App()
             if (res) 
             {
                 setSelectedAttack(res.data || res); 
+                setCurrentView("explorer");
             }
         } 
         catch (error)
@@ -80,6 +82,15 @@ export default function App()
         }
     }
 
+    function navigateToExplorer() {
+        setSelectedAttack(null);
+        setCurrentView("explorer");
+    }
+
+    function navigateToAnalysis() {
+        setCurrentView("analysis");
+    }
+
     const filtered = data.filter(item => {
         if (!search.trim()) return true;
         return item.description?.toLowerCase().includes(search.toLowerCase());
@@ -88,18 +99,39 @@ export default function App()
     return (
         <div className="page">
             <nav className="navbar">
-                <div className="logo-container" onClick={() => setSelectedAttack(null)} style={{ cursor: "pointer" }}>
-                    <div className="logo-icon"><img src="public/MITRE-Icon.webp" alt="MITRE Matrix Logo" style={{ width: '40px', height: '40px', marginRight: '10px' }}/></div>
+                <div className="logo-container" onClick={navigateToExplorer} style={{ cursor: "pointer" }}>
+                    <img src="/MITRE-Icon.webp" alt="MITRE Logo" style={{ width: 40, height: 40, marginRight: 10 }}/>
                     <span className="logo-text">MITRE Matrix</span>
+                </div>
+
+                <div className="nav-links">
+                    <button 
+                        onClick={navigateToExplorer} 
+                        className={`nav-btn ${currentView === 'explorer' ? 'active' : ''}`}
+                    >
+                        Dashboard
+                    </button>
+                    <button 
+                        onClick={navigateToAnalysis} 
+                        className={`nav-btn ${currentView === 'analysis' ? 'active' : ''}`}
+                    >
+                        Analysis
+                    </button>
                 </div>
             </nav>
 
-            {selectedAttack ? (
+            {currentView === "analysis" ? 
+            (
+                <Analysis onAttackPatternSelect={handleCardClick} />
+            ) : 
+            selectedAttack ? 
+            (
                 <AttackDetail 
                     attack={selectedAttack} 
                     onBack={() => setSelectedAttack(null)} 
                 />
-            ) : (
+            ) : 
+            (
                 <div className="container">
                     <header className="header">
                         <h1 className="title">Attack Patterns Explorer</h1>
@@ -185,7 +217,6 @@ export default function App()
                 </div>
             )}
 
-            {/* FIXED: Hook the event handler wrapper to the Chat Window element */}
             <ChatWindow onApplyFilters={handleBotFilters} />
         </div>
     );

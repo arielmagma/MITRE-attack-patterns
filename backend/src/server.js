@@ -1,6 +1,9 @@
 import app from "./app.js";
 import { loadDatabase } from "./dataLoader.js";
 
+import dotenv from "dotenv";
+dotenv.config();
+
 const PORT = process.env.PORT || 3000;
 
 async function main()

@@ -1,6 +1,3 @@
-import dotenv from "dotenv";
-dotenv.config();
-
 const BASE = "https://www.virustotal.com/api/v3";
 
 export async function checkUrl(url)

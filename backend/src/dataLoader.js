@@ -19,6 +19,19 @@ export async function loadDatabase()
     let totalFiles = 0;
     let processedFiles = 0;
 
+    // Create the analysis_jobs table to store analysis jobs and a bit of data
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS analysis_jobs
+        (
+            job_id TEXT PRIMARY KEY,
+            filename TEXT NOT NULL,
+            platform TEXT,
+            status TEXT NOT NULL DEFAULT 'Analyzing',
+            suspicion_level INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+    `);
+
     // Reload data again from 0 every time the server starts up again in case of change in files or attack patterns
     db.exec(`
     CREATE TABLE IF NOT EXISTS attack_patterns 
