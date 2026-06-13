@@ -153,6 +153,24 @@ export async function getAllAnalysisJobs()
     return stmt.all();
 }
 
+export function doesJobExist(jobId)
+{
+    if (!jobId) return false;
+
+    const db = getDB();
+
+    const stmt = db.prepare(`
+        SELECT 1
+        FROM analysis_jobs
+        WHERE job_id = ?
+        LIMIT 1
+    `);
+
+    const row = stmt.get(jobId);
+
+    return !!row;
+}
+
 async function updateStatus()
 {
     const db = getDB();

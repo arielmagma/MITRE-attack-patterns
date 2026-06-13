@@ -14,10 +14,7 @@ export default function AnalysisDetails({ jobId, onBack, onAttackPatternSelect }
             .then((res) => {
                 if (!isMounted) return;
                 
-                console.log("1. Raw API Response Object:", res);
                 if (res && res.success && res.data) {
-                    console.log("Full API Response received by React:", res);
-                    console.log("Extracted report data:", res.data);
                     setReport(res.data);
                 }
             })

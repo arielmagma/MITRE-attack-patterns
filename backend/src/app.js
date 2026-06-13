@@ -5,9 +5,9 @@ import express from "express";
 import cors from "cors";
 import ollama from "ollama";
 import { fileURLToPath } from "node:url";
-import {getAmountOfAttackPatterns, getAttackPatternById, getAttackPatterns, filterAttackPatterns, getAllAnalysisJobs } from "./dataHandler.js";
+import {getAmountOfAttackPatterns, getAttackPatternById, getAttackPatterns, filterAttackPatterns, getAllAnalysisJobs, doesJobExist } from "./dataHandler.js";
 import { checkUrl, checkDomain, checkIP, checkFile } from "./virusTotal.js";
-import { getSandboxReport, uploadFile } from "./sandbox.js";
+import {getSandboxReport, getStatus, uploadFile} from "./sandbox.js";
 
 
 const app = express();
@@ -21,7 +21,7 @@ const __dirname = path.dirname(__filename);
 const storage = multer.diskStorage({
     destination: (req, file, cb) =>
     {
-        cb(null, "uploads/");
+        cb(null, "../uploads/");
     },
 
     filename: (req, file, cb) =>
@@ -115,6 +115,37 @@ const virusTotalTool =
             }
     };
 
+const sandboxTool =
+    {
+        type: 'function',
+        function:
+            {
+                name: 'sandbox',
+                description: 'Interact with malware sandbox: upload files, check job status, or trigger UI actions.',
+
+                parameters:
+                    {
+                        type: 'object',
+                        properties:
+                            {
+                                action:
+                                    {
+                                        type: 'string',
+                                        enum: ['requestFileUpload', 'getStatus', 'requestOpenAnalysis'],
+                                        description: 'Sandbox action to perform.'
+                                    },
+
+                                job_id:
+                                    {
+                                        type: 'string',
+                                        description: 'Job ID for getStatus or openAnalysis.'
+                                    }
+                            },
+                        required: ['action']
+                    }
+            }
+    };
+
 app.get("/api/attack/:id", (req, res) =>
 {
     const { id } = req.params;
@@ -149,7 +180,6 @@ app.get("/api/attacks/total", (req, res) =>
     });
 });
 
-
 app.get("/api/analysis/jobs", async (req, res) => {
     try {
         const jobs = await getAllAnalysisJobs();
@@ -170,6 +200,13 @@ app.get("/api/analysis/jobs/:job_id", async (req, res) =>
 {
     const {job_id} = req.params;
 
+    if (! await doesJobExist(job_id))
+    {
+        return res.json({
+            success: false,
+            error: "Invalid Job Id."
+        });
+    }
     try {
         const report = await getSandboxReport(job_id);
         return res.json({
@@ -177,7 +214,7 @@ app.get("/api/analysis/jobs/:job_id", async (req, res) =>
             data: report
         });
     } catch (error) {
-        console.error("Failed to retrieve analysis queue entries:", error);
+        console.error("Failed to retrieve analysis queue entries.");
         return res.status(500).json({
             success: false,
             error: "Error fetching file analysis report."
@@ -189,36 +226,56 @@ app.post('/api/chat', async (req, res) =>
 {
     const { messages } = req.body;
 
-    try {
-        let response = await ollama.chat
+    try
+    {
+        const response = await ollama.chat
         ({
             model: 'cyber-bot',
-            messages: messages,
-            tools: [webFilterTool, virusTotalTool]
+            messages,
+            tools:
+                [
+                    webFilterTool,
+                    virusTotalTool,
+                    sandboxTool
+                ]
         });
 
-        let botMessage = response.message;
+        const botMessage = response.message;
 
-        if (botMessage.tool_calls && botMessage.tool_calls.length > 0)
+        if (!botMessage.tool_calls || botMessage.tool_calls.length === 0)
         {
-            const toolCall = botMessage.tool_calls[0];
+            return res.json
+            ({
+                type: 'text',
+                message: botMessage.content
+            });
+        }
 
-            if (toolCall.function.name === 'setWebsiteFilters')
+        const toolCall = botMessage.tool_calls[0];
+
+        const toolName = toolCall.function.name;
+
+        const args =
+            typeof toolCall.function.arguments === 'string'
+                ? JSON.parse(toolCall.function.arguments)
+                : toolCall.function.arguments;
+
+        let toolResult = null;
+        let responseType = 'tool';
+
+        switch (toolName)
+        {
+            case 'setWebsiteFilters':
             {
-                const args =
-                    typeof toolCall.function.arguments === "string"
-                        ? JSON.parse(toolCall.function.arguments)
-                        : toolCall.function.arguments;
-
                 const finalArgs =
-                {
-                    platform: safeParse(args.platform),
-                    phase: safeParse(args.phase),
-                    id: args.id ?? '',
-                    name: args.name ?? '',
-                    description: args.description ?? '',
-                    detection: args.detection ?? ''
-                };
+                    {
+                        platform: safeParse(args.platform),
+                        phase: safeParse(args.phase),
+                        id: args.id ?? '',
+                        name: args.name ?? '',
+                        description: args.description ?? '',
+                        detection: args.detection ?? ''
+                    };
 
                 const matchedPatterns = filterAttackPatterns
                 (
@@ -230,100 +287,132 @@ app.post('/api/chat', async (req, res) =>
                     finalArgs.detection
                 );
 
-                messages.push(botMessage);
-                messages.push
-                ({
-                    role: 'user',
-                    content: `TOOL_RESPONSE: {"status":"success","count":${matchedPatterns.length}}`
-                });
+                toolResult =
+                    {
+                        filters: finalArgs,
+                        data: matchedPatterns
+                    };
 
-                const finalResponse = await ollama.chat
-                ({
-                    model: 'cyber-bot',
-                    messages: messages
-                });
+                responseType = 'filter_action';
 
-                return res.json
-                ({
-                    type: 'filter_action',
-                    filters: finalArgs,
-                    data: matchedPatterns,
-                    message: finalResponse.message.content
-                });
+                break;
             }
 
-            if (toolCall.function.name === 'checkVirusTotal')
+            case 'checkVirusTotal':
             {
-                const args =
-                    typeof toolCall.function.arguments === 'string'
-                        ? JSON.parse(toolCall.function.arguments)
-                        : toolCall.function.arguments;
-
-                let result;
-
                 switch (args.type)
                 {
                     case 'file':
-                        result = await checkFile(args.value);
+                        toolResult = await checkFile(args.value);
                         break;
 
                     case 'url':
-                        result = await checkUrl(args.value);
+                        toolResult = await checkUrl(args.value);
                         break;
 
                     case 'domain':
-                        result = await checkDomain(args.value);
+                        toolResult = await checkDomain(args.value);
                         break;
 
                     case 'ip':
-                        result = await checkIP(args.value);
+                        toolResult = await checkIP(args.value);
                         break;
                 }
 
-                messages.push(botMessage);
-                messages.push
-                ({
-                    role: 'user',
-                    content: `TOOL_RESPONSE: ${JSON.stringify(result)}`
-                });
+                responseType = 'virustotal';
 
-                const finalResponse = await ollama.chat
-                ({
-                    model: 'cyber-bot',
-                    messages
-                });
+                break;
+            }
 
-                return res.json
-                ({
-                    type: 'virustotal',
-                    data: result,
-                    message: finalResponse.message.content
-                });
+            case 'sandbox':
+            {
+                switch (args.action)
+                {
+                    case 'requestFileUpload':
+                    {
+                        responseType = "sandbox_upload_request";
+                        break;
+                    }
+
+                    case 'requestOpenAnalysis':
+                    {
+                        if (await doesJobExist(args.job_id)) {
+                            toolResult = args.job_id;
+                            responseType = "open_analysis_review";
+                        }
+                        else {
+                            toolResult = "This Job Does Not Exist";
+                            responseType = "invalid_job_id";
+                        }
+                        break;
+                    }
+
+                    case 'getStatus':
+                    {
+                        if (await doesJobExist(args.job_id)) {
+                            toolResult = await getStatus(args.job_id);
+                            responseType = "sandbox";
+                        }
+                        else {
+                            toolResult = "This Job Does Not Exist";
+                            responseType = "invalid_job_id";
+                        }
+                        break;
+                    }
+                }
+
+                break;
             }
         }
 
-        return res.json
+        messages.push(botMessage);
+
+        messages.push
         ({
-            type: 'text',
-            message: botMessage.content
+            role: 'user',
+            content: `TOOL_RESPONSE: ${JSON.stringify(toolResult)}`
         });
 
+        const finalResponse = await ollama.chat
+        ({
+            model: 'cyber-bot',
+            messages
+        });
+
+        return res.json
+        ({
+            type: responseType,
+            data: toolResult,
+            message: finalResponse.message.content
+        });
     }
     catch (error)
     {
-        console.error("Backend Chat Error:", error);
-        res.status(500).json({ error: "Ollama communication failure" });
+        console.error('Backend Chat Error:', error);
+
+        return res.status(500).json
+        ({
+            error: 'Ollama communication failure'
+        });
     }
 });
 
 app.post("/api/analysis/upload", upload.single("file"), async (req, res) =>
 {
     const filePath = req.file?.path;
-    const originalName = req.file?.originalname;
+
+    if (!filePath)
+    {
+        return res.status(400).json({
+            success: false,
+            error: "No file uploaded or invalid form-data field name"
+        });
+    }
 
     try
     {
         const result = await uploadFile(filePath);
+
         return res.json({
             success: true,
             data: result
@@ -331,45 +420,17 @@ app.post("/api/analysis/upload", upload.single("file"), async (req, res) =>
     }
     catch (err)
     {
-        console.error(err);
+        console.error("UPLOAD ERROR:", err);
 
         return res.status(500).json({
             success: false,
-            error: "Upload failed"
+            error: err.message || "Upload failed"
         });
     }
     finally
     {
-        if (filePath)
-        {
-            fs.unlink(filePath, () => {});
-        }
+        fs.unlink(filePath, () => {});
     }
 });
-
-const safeParse = (value) =>
-{
-    if (value == null) return [];
-
-    if (Array.isArray(value)) return value;
-
-    if (typeof value === "string")
-    {
-        try
-        {
-            const parsed = JSON.parse(value);
-
-            if (Array.isArray(parsed)) return parsed;
-
-            return [parsed];
-        }
-        catch
-        {
-            return [value];
-        }
-    }
-
-    return [value];
-};
 
 export default app;

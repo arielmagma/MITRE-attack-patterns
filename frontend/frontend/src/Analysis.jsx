@@ -64,10 +64,7 @@ export default function Analysis({ onAttackPatternSelect })
     const handleRunAnalysis = async () =>
     {
         if (!selectedFile)
-        {
-            alert("Please select a file first.");
             return;
-        }
 
         try
         {
@@ -78,8 +75,6 @@ export default function Analysis({ onAttackPatternSelect })
                 throw new Error("Upload failed");
             }
 
-            alert("File submitted successfully!");
-
             setSelectedFile(null);
 
             await loadJobs();
@@ -87,7 +82,6 @@ export default function Analysis({ onAttackPatternSelect })
         catch (err)
         {
             console.error("Upload failed:", err);
-            alert("Failed to upload file.");
         }
     };
 

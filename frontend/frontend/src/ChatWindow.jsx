@@ -1,16 +1,53 @@
 import { useState } from "react";
 import "./ChatWindow.css";
-import { askFilterAssistant } from "./communicator.js";
+import { askFilterAssistant, uploadFileForAnalysis } from "./communicator.js";
 
-export default function ChatWindow({ onApplyFilters }) 
+export default function ChatWindow({ onApplyFilters, onOpenAnalysis }) 
 {
-    const [isMinimized, setIsMinimized] = useState(false);
+    const [isMinimized, setIsMinimized] = useState(true);
     const [messages, setMessages] = useState([]);
     const [inputValue, setInputValue] = useState("");
     const [loading, setLoading] = useState(false);
 
     const toggleMinimize = () => {
         setIsMinimized(!isMinimized);
+    };
+
+    const handleFileUpload = async () =>
+    {
+        return new Promise((resolve, reject) =>
+        {
+            const input = document.createElement("input");
+            input.type = "file";
+
+            input.onchange = async () =>
+            {
+                const file = input.files?.[0];
+
+                if (!file)
+                    return reject("No file selected");
+
+                setMessages(prev => [
+                    ...prev,
+                    {
+                        role: "user",
+                        content: `Uploaded file: ${file.name}`
+                    }
+                ]);
+
+                try
+                {
+                    const result = await uploadFileForAnalysis(file);
+                    resolve(result);
+                }
+                catch (err)
+                {
+                    reject(err);
+                }
+            };
+
+            input.click();
+        });
     };
 
     const handleSendMessage = async (e) => 
@@ -43,6 +80,26 @@ export default function ChatWindow({ onApplyFilters })
                 onApplyFilters(responseData.filters, responseData.data || null);
             }
         }
+
+        if (responseData.type === "sandbox_upload_request") 
+        {
+            const result = await handleFileUpload();
+
+            if (result?.success)
+            {
+                setMessages(prev => [...prev,
+                {
+                    role: "assistant",
+                    content: `Upload complete.\nJob ID: ${result.data?.job_id}`
+                }]);
+            }
+        }
+
+        if (responseData.type === "open_analysis_review")
+        {
+            onOpenAnalysis?.(responseData.data);
+        }
+    
 
         setLoading(false);
     };

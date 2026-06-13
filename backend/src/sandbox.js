@@ -54,7 +54,6 @@ async function uploadToHybridAnalysis(filePath)
 export async function uploadFile(filePath)
 {
     const result = await uploadToHybridAnalysis(filePath);
-    console.log("Uploaded file for analysis.");
     saveAnalysisJob({
         jobId: result.job_id,
         filename: path.basename(filePath),

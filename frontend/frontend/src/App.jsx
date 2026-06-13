@@ -4,6 +4,7 @@ import { getAttackPatternById, getAttackPatterns, getTotalAttackPatterns } from 
 import AttackDetail from "./AttackDetail.jsx"; 
 import ChatWindow from "./ChatWindow.jsx"; 
 import Analysis from "./Analysis.jsx";
+import AnalysisDetails from "./AnalysisDetails.jsx";
 
 export default function App()
 {
@@ -17,6 +18,9 @@ export default function App()
     const [loadingDetails, setLoadingDetails] = useState(false);
 
     const [activeBotFilters, setActiveBotFilters] = useState(null);
+
+    const [analysisJobId, setAnalysisJobId] = useState(null);
+    const [analysisOpen, setAnalysisOpen] = useState(false);
 
     const stateRef = useRef({ data });
     
@@ -120,15 +124,23 @@ export default function App()
                 </div>
             </nav>
 
-            {currentView === "analysis" ? 
+            {analysisOpen ? 
+            (
+                <AnalysisDetails
+                    jobId={analysisJobId}
+                    onBack={() => setAnalysisOpen(false)}
+                    onAttackPatternSelect={handleCardClick}
+                />
+            ) : 
+            currentView === "analysis" ? 
             (
                 <Analysis onAttackPatternSelect={handleCardClick} />
             ) : 
             selectedAttack ? 
             (
-                <AttackDetail 
-                    attack={selectedAttack} 
-                    onBack={() => setSelectedAttack(null)} 
+                <AttackDetail
+                    attack={selectedAttack}
+                    onBack={() => setSelectedAttack(null)}
                 />
             ) : 
             (
@@ -217,7 +229,14 @@ export default function App()
                 </div>
             )}
 
-            <ChatWindow onApplyFilters={handleBotFilters} />
+            <ChatWindow
+                onApplyFilters={handleBotFilters}
+                onOpenAnalysis={(jobId) => {
+                    setAnalysisJobId(jobId);
+                    setAnalysisOpen(true);
+                    setCurrentView("analysis");
+                }}
+            />
         </div>
     );
 }
