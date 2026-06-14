@@ -260,130 +260,192 @@ app.post('/api/chat', async (req, res) =>
                 ? JSON.parse(toolCall.function.arguments)
                 : toolCall.function.arguments;
 
-        let toolResult = null;
-        let responseType = 'tool';
+        /*
+            FILTERS
+        */
 
-        switch (toolName)
+        if (toolName === 'setWebsiteFilters')
         {
-            case 'setWebsiteFilters':
-            {
-                const finalArgs =
-                    {
-                        platform: safeParse(args.platform),
-                        phase: safeParse(args.phase),
-                        id: args.id ?? '',
-                        name: args.name ?? '',
-                        description: args.description ?? '',
-                        detection: args.detection ?? ''
-                    };
-
-                const matchedPatterns = filterAttackPatterns
-                (
-                    finalArgs.platform,
-                    finalArgs.phase,
-                    finalArgs.id,
-                    finalArgs.name,
-                    finalArgs.description,
-                    finalArgs.detection
-                );
-
-                toolResult =
-                    {
-                        filters: finalArgs,
-                        data: matchedPatterns
-                    };
-
-                responseType = 'filter_action';
-
-                break;
-            }
-
-            case 'checkVirusTotal':
-            {
-                switch (args.type)
+            const finalArgs =
                 {
-                    case 'file':
-                        toolResult = await checkFile(args.value);
-                        break;
+                    platform: safeParse(args.platform),
+                    phase: safeParse(args.phase),
+                    id: args.id ?? '',
+                    name: args.name ?? '',
+                    description: args.description ?? '',
+                    detection: args.detection ?? ''
+                };
 
-                    case 'url':
-                        toolResult = await checkUrl(args.value);
-                        break;
+            const matchedPatterns = filterAttackPatterns
+            (
+                finalArgs.platform,
+                finalArgs.phase,
+                finalArgs.id,
+                finalArgs.name,
+                finalArgs.description,
+                finalArgs.detection
+            );
 
-                    case 'domain':
-                        toolResult = await checkDomain(args.value);
-                        break;
-
-                    case 'ip':
-                        toolResult = await checkIP(args.value);
-                        break;
-                }
-
-                responseType = 'virustotal';
-
-                break;
-            }
-
-            case 'sandbox':
-            {
-                switch (args.action)
-                {
-                    case 'requestFileUpload':
+            const updatedMessages =
+                [
+                    ...messages,
+                    botMessage,
                     {
-                        responseType = "sandbox_upload_request";
-                        break;
+                        role: 'user',
+                        content: `TOOL_RESPONSE: {"status":"success","count":${matchedPatterns.length}}`
                     }
+                ];
 
-                    case 'requestOpenAnalysis':
-                    {
-                        if (await doesJobExist(args.job_id)) {
-                            toolResult = args.job_id;
-                            responseType = "open_analysis_review";
-                        }
-                        else {
-                            toolResult = "This Job Does Not Exist";
-                            responseType = "invalid_job_id";
-                        }
-                        break;
-                    }
+            const finalResponse = await ollama.chat
+            ({
+                model: 'cyber-bot',
+                messages: updatedMessages
+            });
 
-                    case 'getStatus':
-                    {
-                        if (await doesJobExist(args.job_id)) {
-                            toolResult = await getStatus(args.job_id);
-                            responseType = "sandbox";
-                        }
-                        else {
-                            toolResult = "This Job Does Not Exist";
-                            responseType = "invalid_job_id";
-                        }
-                        break;
-                    }
-                }
-
-                break;
-            }
+            return res.json
+            ({
+                type: 'filter_action',
+                filters: finalArgs,
+                data: matchedPatterns,
+                message: finalResponse.message.content
+            });
         }
 
-        messages.push(botMessage);
+        /*
+            VIRUSTOTAL
+        */
 
-        messages.push
-        ({
-            role: 'user',
-            content: `TOOL_RESPONSE: ${JSON.stringify(toolResult)}`
-        });
+        if (toolName === 'checkVirusTotal')
+        {
+            let result;
 
-        const finalResponse = await ollama.chat
-        ({
-            model: 'cyber-bot',
-            messages
-        });
+            switch (args.type)
+            {
+                case 'file':
+                    result = await checkFile(args.value);
+                    break;
+
+                case 'url':
+                    result = await checkUrl(args.value);
+                    break;
+
+                case 'domain':
+                    result = await checkDomain(args.value);
+                    break;
+
+                case 'ip':
+                    result = await checkIP(args.value);
+                    break;
+            }
+
+            const updatedMessages =
+                [
+                    ...messages,
+                    botMessage,
+                    {
+                        role: 'user',
+                        content: `TOOL_RESPONSE: ${JSON.stringify(result)}`
+                    }
+                ];
+
+            const finalResponse = await ollama.chat
+            ({
+                model: 'cyber-bot',
+                messages: updatedMessages
+            });
+
+            return res.json
+            ({
+                type: 'virustotal',
+                data: result,
+                message: finalResponse.message.content
+            });
+        }
+
+        /*
+            SANDBOX
+        */
+
+        if (toolName === 'sandbox')
+        {
+            let toolResult = null;
+            let responseType = 'sandbox';
+
+            switch (args.action)
+            {
+                case 'requestFileUpload':
+                {
+                    toolResult =
+                        {
+                            status: 'awaiting_upload'
+                        };
+
+                    responseType = 'sandbox_upload_request';
+
+                    break;
+                }
+
+                case 'requestOpenAnalysis':
+                {
+                    if (await doesJobExist(args.job_id))
+                    {
+                        toolResult = args.job_id;
+                        responseType = 'open_analysis_review';
+                    }
+                    else
+                    {
+                        toolResult = 'This Job Does Not Exist';
+                        responseType = 'invalid_job_id';
+                    }
+
+                    break;
+                }
+
+                case 'getStatus':
+                {
+                    if (await doesJobExist(args.job_id))
+                    {
+                        toolResult = await getStatus(args.job_id);
+                        responseType = 'sandbox';
+                    }
+                    else
+                    {
+                        toolResult = 'This Job Does Not Exist';
+                        responseType = 'invalid_job_id';
+                    }
+
+                    break;
+                }
+            }
+
+            const updatedMessages =
+                [
+                    ...messages,
+                    botMessage,
+                    {
+                        role: 'user',
+                        content: `TOOL_RESPONSE: ${JSON.stringify(toolResult)}`
+                    }
+                ];
+
+            const finalResponse = await ollama.chat
+            ({
+                model: 'cyber-bot',
+                messages: updatedMessages
+            });
+
+            return res.json
+            ({
+                type: responseType,
+                data: toolResult,
+                message: finalResponse.message.content
+            });
+        }
 
         return res.json
         ({
-            type: responseType,
-            data: toolResult,
-            message: finalResponse.message.content
+            type: 'text',
+            message: botMessage.content
         });
     }
     catch (error)
@@ -432,5 +494,30 @@ app.post("/api/analysis/upload", upload.single("file"), async (req, res) =>
         fs.unlink(filePath, () => {});
     }
 });
+
+const safeParse = (value) =>
+{
+    if (value == null) return [];
+
+    if (Array.isArray(value)) return value;
+
+    if (typeof value === "string")
+    {
+        try
+        {
+            const parsed = JSON.parse(value);
+
+            if (Array.isArray(parsed)) return parsed;
+
+            return [parsed];
+        }
+        catch
+        {
+            return [value];
+        }
+    }
+
+    return [value];
+};
 
 export default app;

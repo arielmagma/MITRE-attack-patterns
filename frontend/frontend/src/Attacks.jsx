@@ -1,12 +1,12 @@
 import { useEffect, useState, useRef } from "react";
-import './App.css';
+import './Attacks.css';
 import { getAttackPatternById, getAttackPatterns, getTotalAttackPatterns } from "./communicator.js";
 import AttackDetail from "./AttackDetail.jsx"; 
 import ChatWindow from "./ChatWindow.jsx"; 
 import Analysis from "./Analysis.jsx";
 import AnalysisDetails from "./AnalysisDetails.jsx";
 
-export default function App()
+export default function Attacks()
 {
     const [currentView, setCurrentView] = useState("explorer");
     const [search, setSearch] = useState("");

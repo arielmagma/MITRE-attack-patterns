@@ -30,7 +30,8 @@ export function getAttackPatterns(offset, limit)
 
     const stmt = db.prepare(`
         SELECT *
-        FROM attack_patterns 
+        FROM attack_patterns
+        ORDER BY id
     `);
 
     const rows = stmt.all();
@@ -53,7 +54,7 @@ export function getAmountOfAttackPatterns()
 export function filterAttackPatterns(platform, phase, id, name, description, detection)
 {
     const db = getDB();
-    let query = "SELECT * FROM attack_patterns WHERE 1=1";
+    let query = "SELECT * FROM attack_patterns WHERE 1=1 ";
     const params = [];
 
     // Platform Filter
@@ -109,6 +110,8 @@ export function filterAttackPatterns(platform, phase, id, name, description, det
         query += " AND detection LIKE ?";
         params.push(`%${detection.trim()}%`);
     }
+
+    query += " ORDER BY id";
 
     const rows = db.prepare(query).all(...params);
     return rows.map(row =>

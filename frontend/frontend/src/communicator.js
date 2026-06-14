@@ -32,7 +32,7 @@ export async function getTotalAttackPatterns()
     return total;
 }
 
-export async function askFilterAssistant(history) 
+export async function askBot(history) 
 {
     try {
         const res = await fetch("http://localhost:3000/api/chat", 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./ChatWindow.css";
-import { askFilterAssistant, uploadFileForAnalysis } from "./communicator.js";
+import { askBot, uploadFileForAnalysis } from "./communicator.js";
 
 export default function ChatWindow({ onApplyFilters, onOpenAnalysis }) 
 {
@@ -65,7 +65,7 @@ export default function ChatWindow({ onApplyFilters, onOpenAnalysis })
         
         setMessages(updatedHistory);
 
-        const responseData = await askFilterAssistant(updatedHistory);
+        const responseData = await askBot(updatedHistory);
 
         setMessages(prev => [...prev, 
         { 
@@ -125,8 +125,12 @@ export default function ChatWindow({ onApplyFilters, onOpenAnalysis })
                         {messages.length === 0 ? 
                         (
                             <div className="chat-empty-state">
-                                <p>Ask me to adjust filters. For example:</p>
-                                <small>"Show me attack patterns targeting Linux systems"</small>
+                                <p>Ask me to adjust filters, check with virus total, or upload a file for analysis.</p>
+                                <p>For example:</p>
+
+                                <small>"Show me attacks targeting Linux systems"</small><br />
+                                <small>"Check IP 8.8.8.8 with VirusTotal"</small><br />
+                                <small>"Upload a file for analysis"</small>
                             </div>
                         ) : (
                             messages.map((msg, idx) => 
