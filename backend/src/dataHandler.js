@@ -195,7 +195,6 @@ async function updateStatus()
             {
                 const summary = await getSummary(job.job_id);
                 const updatedThreat = summary?.threat_level;
-                console.log(updatedThreat);
                 updateJobStatus(job.job_id, updatedStatus, updatedThreat);
             }
         }
