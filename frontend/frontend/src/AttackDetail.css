@@ -64,7 +64,6 @@
     border-bottom: none;
 }
 
-/* Box Item Labels (e.g., DESCRIPTION, DETECTION) */
 .detail-label {
     font-size: 11px;
     text-transform: uppercase;
@@ -75,7 +74,6 @@
     user-select: none;
 }
 
-/* Value Node Base Styles */
 .detail-value {
     font-size: 15px;
     color: #1e293b;
@@ -96,7 +94,6 @@
     border: 1px solid #dbeafe;
 }
 
-/* Codeblock formatting wrapper for rule logs or multi-line detections */
 .detail-value.detection-text {
     background: #f8fafc;
     padding: 16px;

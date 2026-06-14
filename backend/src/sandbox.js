@@ -120,7 +120,7 @@ export async function getSandboxReport(jobId)
         return { success: false, data: null };
     }
 
-    var data = {};
+    let data = {};
 
     data.jobId = jobId;
     data.filename = summary.submit_name || (summary.submissions?.[0]?.filename) || "NA";
@@ -132,6 +132,7 @@ export async function getSandboxReport(jobId)
     };
 
     data.heuristic = {
+        threatLevel: summary.threat_level,
         verdictClass: summary.verdict,
         label: summary.verdict ? summary.verdict.toUpperCase() : "NO SPECIFIC THREAT",
         notes: summary.certificates_validation_message || "Analysis finalized without critical runtime metadata warnings."
@@ -139,14 +140,7 @@ export async function getSandboxReport(jobId)
 
     data.behaviorLog = [];
     if (summary.signatures && Array.isArray(summary.signatures)) {
-        const filteredSigs = summary.signatures.filter(sig => {
-            return sig.relevance >= 5 &&
-            sig.origin !== "Network Traffic" &&
-            sig.name !== "Writes files" &&
-            sig.name !== "Dropped files"
-        }); // Add only signatures that are not concerning network traffic, file creating or deleting, and that are relevant (relevance > 0)
-
-        filteredSigs.forEach((sig) =>
+        summary.signatures.forEach((sig) =>
         {
             let logType = "normal";
             if (sig.threat_level_human === "suspicious" || sig.threat_level === 1) logType = "warning";
@@ -172,86 +166,12 @@ export async function getSandboxReport(jobId)
     }
 
     data.networkConnections = [];
-
-    if (summary.signatures && Array.isArray(summary.signatures)) {
-        summary.signatures.forEach(sig =>
-        {
-            if (sig.origin === "Network Traffic")
-            {
-                const rawDescription = sig.description || "";
-                let host = "Unknown Host";
-
-                const ipRegex = /(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/;
-                const ipMatch = rawDescription.match(ipRegex);
-
-                if (ipMatch) {
-                    host = ipMatch[1];
-                }
-                else
-                {
-                    const domainMatch = rawDescription.match(/"([^"]+)"/);
-                    if (domainMatch)
-                    {
-                        host = domainMatch[1];
-                    }
-                }
-
-                data.networkConnections.push({
-                    target: host,
-                    label: sig.name,
-                    badgeClass: sig.threat_level_human
-                });
-            }
-        });
-    }
-
+    if (summary.hosts && Array.isArray(summary.hosts))
+        summary.hosts.forEach((host) => data.networkConnections.push(host));
 
     data.fileMutations = [];
-
-    if (summary.signatures && Array.isArray(summary.signatures)) {
-        const fileSigs = summary.signatures.filter(sig =>
-            sig.name === 'Dropped files' || sig.name === "Writes files"
-        );
-
-        fileSigs.forEach(sig =>
-        {
-            if (!sig.description) return;
-
-            let action = '[*]';
-            let badgeClass = "";
-            let extractedPath = "";
-
-            if (sig.name === "Writes files") {
-                action = '[+]';
-                badgeClass = "text-add";
-            }
-            else if (sig.name === "Dropped files") {
-                action = '[-]';
-                badgeClass = "text-del";
-            }
-
-            const match = sig.description.match(/"([^"]+)"$/);
-            if (match) {
-                extractedPath = match[1];
-            }
-
-            if (extractedPath) { // Check if not name / path of submitted file
-                const pathParts = extractedPath.split('\\');
-                const fileNameOnly = pathParts[pathParts.length - 1].toLowerCase();
-
-                if (summary.submit_name && fileNameOnly === summary.submit_name) { // if file name is the same as the submitted file exclude it
-                    return;
-                }
-            }
-
-            data.fileMutations.push({
-                action: action,
-                badgeClass: badgeClass,
-                path: extractedPath,
-            })
-        });
-    }
-
+    if (summary.extracted_files && Array.isArray(summary.extracted_files))
+        summary.extracted_files.forEach((extracted_file) => data.fileMutations.push(extracted_file.name));
 
     data.attackPatterns = [];
     if (summary.mitre_attcks && Array.isArray(summary.mitre_attcks))

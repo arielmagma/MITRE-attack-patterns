@@ -82,7 +82,7 @@ export default function AnalysisDetails({ jobId, onBack, onAttackPatternSelect }
                         <div className={`verdict-status-block ${report.heuristic?.verdictClass}`}>
                             <span className="verdict-indicator-dot"></span>
                             <span className="verdict-text-label">
-                                {report.heuristic?.label} (Level: {report.threat_level})
+                                {report.heuristic?.label} (Level: {report.heuristic?.threatLevel})
                             </span>
                         </div>
                         <p className="verdict-summary-notes">{report.heuristic?.notes}</p>
@@ -111,7 +111,7 @@ export default function AnalysisDetails({ jobId, onBack, onAttackPatternSelect }
                                 <ul className="artifact-items-list">
                                     {report.networkConnections?.map((conn, index) => (
                                         <li key={index}>
-                                            <code>{conn.target}</code> → <span className={conn.badgeClass}>{conn.label}</span>
+                                            <code>{typeof conn === "string" ? conn : conn?.target}</code>
                                         </li>
                                     ))}
                                 </ul>
@@ -120,9 +120,9 @@ export default function AnalysisDetails({ jobId, onBack, onAttackPatternSelect }
                             <div className="artifact-subcard">
                                 <div className="card-header-icon">File Mutations</div>
                                 <ul className="artifact-items-list">
-                                    {report.fileMutations?.map((mutation, index) => (
+                                    {report.fileMutations?.map((file, index) => (
                                         <li key={index}>
-                                            <span className={mutation.badgeClass}>{mutation.action}</span> <code>{mutation.path}</code>
+                                            <code>{typeof file === "string" ? file : file?.path}</code>
                                         </li>
                                     ))}
                                 </ul>

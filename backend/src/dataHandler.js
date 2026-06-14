@@ -148,7 +148,7 @@ export async function getAllAnalysisJobs()
 
     const db = getDB();
     const stmt = db.prepare(`
-        SELECT job_id AS id, filename AS name, platform, status
+        SELECT job_id AS id, filename AS name, platform, status, suspicion_level AS threat_level
         FROM analysis_jobs
         ORDER BY created_at DESC
     `);

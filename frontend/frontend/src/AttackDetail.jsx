@@ -15,10 +15,8 @@ export default function AttackDetail({ attack, onBack })
                 <h1 className="detail-title">{attack.name}</h1>
             </header>
 
-            {/* List Box Structure */}
             <div className="detail-list-box">
                 
-                {/* 1. Attack Pattern ID */}
                 <div className="detail-row">
                     <span className="detail-label">Attack Pattern ID</span>
                     <div>
@@ -26,7 +24,6 @@ export default function AttackDetail({ attack, onBack })
                     </div>
                 </div>
                 
-                {/* 2. Description */}
                 <div className="detail-row">
                     <span className="detail-label">Description</span>
                     <div className="detail-value">
@@ -34,7 +31,6 @@ export default function AttackDetail({ attack, onBack })
                     </div>
                 </div>
 
-                {/* 3. Platforms */}
                 <div className="detail-row">
                     <span className="detail-label">Platforms</span>
                     <div className="detail-value">
@@ -62,16 +58,13 @@ export default function AttackDetail({ attack, onBack })
                     </div>
                 </div>
 
-                {/* 4. Detection */}
                 <div className="detail-row">
                     <span className="detail-label">Detection</span>
-                    {/* Changed from span to div to fix structural block styling */}
                     <div className="detail-value detection-text">
                         {attack.detection || "No explicit detection rules mapped."}
                     </div>
                 </div>
-
-                {/* 5. Phases */}
+                
                 <div className="detail-row">
                     <span className="detail-label">Phases</span>
                     <div className="detail-value">
